@@ -1,0 +1,278 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: base
+Parameters:
+  # ---------------------
+  #         ENV
+  # ---------------------
+  PJName:
+    Description: Project Name 
+    Default: sample
+    Type: String
+
+  # ---------------------
+  #         VPC
+  # ---------------------
+  VPCCIDR:
+    Default: "10.2.0.0/16"
+    Type: String
+
+  # ---------------------
+  #         Subnet
+  # ---------------------
+  PublicSubnetACIDR:
+    Default: "10.2.0.0/24"
+    Type: String
+  PublicSubnetCCIDR:
+    Default: "10.2.1.0/24"
+    Type: String
+  PrivateSubnetACIDR:
+    Default: "10.2.2.0/24"
+    Type: String
+  PrivateSubnetCCIDR:
+    Default: "10.2.3.0/24"
+    Type: String
+
+Resources:
+# -------------------------------------
+#                VPC
+# -------------------------------------
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VPCCIDR # Conditional
+      # EnableDnsHostnames: Boolean # non-required
+      # EnableDnsSupport: Boolean  # non-required
+      # InstanceTenancy: String # non-required
+      # Ipv4IpamPoolId: String # Conditional
+      # Ipv4NetmaskLength: Integer # non-required
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-VPC"
+
+# -------------------------------------
+#          Security Group
+# -------------------------------------
+  SG:
+    DependsOn: VPC
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: for sample Resources as base # required
+      GroupName: !Sub "${PJName}-base-SecurityGroup"  # non-required
+      SecurityGroupEgress:   # non-required [VPC only] 
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      # SecurityGroupIngress:   # non-required
+      #   - Ingress
+      # Tags: # non-required
+      #   - Tag
+      VpcId: !Ref VPC # non-required [VPC only] 
+
+# -------------------------------------
+#              Subnet
+# -------------------------------------
+  # -------------------------------------
+  #              Public
+  # -------------------------------------
+  PublicSubnetA:
+    DependsOn: VPC
+    Type: AWS::EC2::Subnet
+    Properties: 
+      # AssignIpv6AddressOnCreation: Boolean # non-required
+      AvailabilityZone: "ap-northeast-1a" # non-required
+      # AvailabilityZoneId: String # non-required
+      CidrBlock: !Ref PublicSubnetACIDR # conditional
+      # EnableDns64: Boolean # non-required
+      # Ipv6CidrBlock: String # conditional
+      # Ipv6Native: Boolean # non-required
+      # MapPublicIpOnLaunch: Boolean # non-required
+      # OutpostArn: String # non-required
+      # PrivateDnsNameOptionsOnLaunch: # non-required
+      #   PrivateDnsNameOptionsOnLaunch
+      Tags: # non-required
+        - Key: Name
+          Value: !Sub "${PJName}-public-subnet-a"
+      VpcId: !Ref VPC # required
+
+  PublicSubnetC:
+    DependsOn: VPC
+    Type: AWS::EC2::Subnet
+    Properties: 
+      # AssignIpv6AddressOnCreation: Boolean # non-required
+      AvailabilityZone: "ap-northeast-1c" # non-required
+      # AvailabilityZoneId: String # non-required
+      CidrBlock: !Ref PublicSubnetCCIDR # conditional
+      # EnableDns64: Boolean # non-required
+      # Ipv6CidrBlock: String # conditional
+      # Ipv6Native: Boolean # non-required
+      # MapPublicIpOnLaunch: Boolean # non-required
+      # OutpostArn: String # non-required
+      # PrivateDnsNameOptionsOnLaunch: # non-required
+      #   PrivateDnsNameOptionsOnLaunch
+      Tags: # non-required
+        - Key: Name
+          Value: !Sub "${PJName}-public-subnet-c"
+      VpcId: !Ref VPC # required
+
+  # -------------------------------------
+  #              Private
+  # -------------------------------------
+  PrivateSubnetA:
+    DependsOn: VPC
+    Type: AWS::EC2::Subnet
+    Properties: 
+      # AssignIpv6AddressOnCreation: Boolean # non-required
+      AvailabilityZone: "ap-northeast-1a" # non-required
+      # AvailabilityZoneId: String # non-required
+      CidrBlock: !Ref PrivateSubnetACIDR # conditional
+      # EnableDns64: Boolean # non-required
+      # Ipv6CidrBlock: String # conditional
+      # Ipv6Native: Boolean # non-required
+      # MapPublicIpOnLaunch: Boolean # non-required
+      # OutpostArn: String # non-required
+      # PrivateDnsNameOptionsOnLaunch: # non-required
+      #   PrivateDnsNameOptionsOnLaunch
+      Tags: # non-required
+        - Key: Name
+          Value: !Sub "${PJName}-private-subnet-a"
+      VpcId: !Ref VPC # required
+
+  PrivateSubnetC:
+    DependsOn: VPC
+    Type: AWS::EC2::Subnet
+    Properties: 
+      # AssignIpv6AddressOnCreation: Boolean # non-required
+      AvailabilityZone: "ap-northeast-1c" # non-required
+      # AvailabilityZoneId: String # non-required
+      CidrBlock: !Ref PrivateSubnetCCIDR # conditional
+      # EnableDns64: Boolean # non-required
+      # Ipv6CidrBlock: String # conditional
+      # Ipv6Native: Boolean # non-required
+      # MapPublicIpOnLaunch: Boolean # non-required
+      # OutpostArn: String # non-required
+      # PrivateDnsNameOptionsOnLaunch: # non-required
+      #   PrivateDnsNameOptionsOnLaunch
+      Tags: # non-required
+        - Key: Name
+          Value: !Sub "${PJName}-private-subnet-c"
+      VpcId: !Ref VPC # required
+
+Outputs:
+  # ---------------------
+  #         VPC
+  # ---------------------
+  VPCCidrBlock:
+    Value: !GetAtt VPC.CidrBlock
+    Export:
+      Name: !Sub "${PJName}-VPCCidrBlock"
+  # VPCCidrBlockAssociations:
+  #   Value: !GetAtt VPC.CidrBlockAssociations # This seems to be List 
+  VPCNETWORKACL:
+    Value: !GetAtt VPC.DefaultNetworkAcl
+    Export:
+      Name: !Sub "${PJName}-VPCDefaultNetworkACL"
+  # VPCIpv6CidrBlocks:
+  #   Value: !GetAtt VPC.Ipv6CidrBlocks
+  VPCId:
+    Value: !GetAtt VPC.VpcId
+    Export:
+      Name: !Sub "${PJName}-VPCId"
+  # ---------------------
+  #     Security Group
+  # ---------------------
+  SGResourceId:
+    Value: !Ref SG
+    Export:
+      Name: !Sub "${PJName}-SGResourceId"
+  # SGGroupId:
+  #   Value: !GetAtt SG.GroupId
+  # SGVpcId:
+  #   Value: !GetAtt SG.VpcId
+  # ---------------------
+  #        subnet
+  # ---------------------
+  # ===========
+  # Public A
+  # ===========
+  PublicSubnetAId:
+    Value: !Ref PublicSubnetA
+    Export:
+      Name: !Sub "${PJName}-PublicSubnet-A-Id"
+  # PublicSubnetAAZ:
+  #   Value: !GetAtt PublicSubnetA.AvailabilityZone
+  # PublicSubnetAIpv6CidrBlocks:
+  #   Value: !GetAtt PublicSubnetA.Ipv6CidrBlocks
+  PublicSubnetANetworkAclId:
+    Value: !GetAtt PublicSubnetA.NetworkAclAssociationId
+    Export:
+      Name: !Sub "${PJName}-PublicSubnet-A-NetworkACLId"
+  # PublicSubnetAOutpostArn:
+  #   Value: !GetAtt PublicSubnetA.OutpostArn
+  # PublicSubnetASubnetId:
+  #   Value: !GetAtt PublicSubnetA.SubnetId
+  # PublicSubnetAVpcId:
+  #   Value: !GetAtt PublicSubnetA.VpcId
+  # ===========
+  # Public C
+  # ===========
+  PublicSubnetCId:
+    Value: !Ref PublicSubnetC
+    Export:
+      Name: !Sub "${PJName}-PublicSubnet-C-Id"
+  # PublicSubnetCAZ:
+  #   Value: !GetAtt PublicSubnetC.AvailabilityZone
+  # PublicSubnetC-Ipv6CidrBlocks:
+  #   Value: !GetAtt PublicSubnetC.Ipv6CidrBlocks
+  PublicSubnetCNetworkAclId:
+    Value: !GetAtt PublicSubnetC.NetworkAclAssociationId
+    Export:
+      Name: !Sub "${PJName}-PublicSubnet-C-NetworkACLId"
+  # PublicSubnetCOutpostArn:
+  #   Value: !GetAtt PublicSubnetC.OutpostArn
+  # PublicSubnetCSubnetId:
+  #   Value: !GetAtt PublicSubnetC.SubnetId
+  # PublicSubnetCVpcId:
+  #   Value: !GetAtt PublicSubnetC.VpcId
+  # ===========
+  # Private A
+  # ===========
+  PrivateSubnetAId:
+    Value: !Ref PrivateSubnetA
+    Export:
+      Name: !Sub "${PJName}-PrivateSubnet-A-Id"
+  # PrivateSubnetAAZ:
+  #   Value: !GetAtt PrivateSubnetA.AvailabilityZone
+  # PrivateSubnetA-Ipv6CidrBlocks:
+  #   Value: !GetAtt PrivateSubnetA.Ipv6CidrBlocks
+  PrivateSubnetANetworkAclId:
+    Value: !GetAtt PrivateSubnetA.NetworkAclAssociationId
+    Export:
+      Name: !Sub "${PJName}-PrivateSubnet-A-NetworkACLId"
+  # PrivateSubnetAOutpostArn:
+  #   Value: !GetAtt PrivateSubnetA.OutpostArn
+  # PrivateSubnetASubnetId:
+  #   Value: !GetAtt PrivateSubnetA.SubnetId
+  # PrivateSubnetAVpcId:
+  #   Value: !GetAtt PrivateSubnetA.VpcId
+  # ===========
+  # Private C
+  # ===========
+  PrivateSubnetCId:
+    Value: !Ref PrivateSubnetC
+    Export:
+      Name: !Sub "${PJName}-PrivateSubnet-C-Id"
+  # PrivateSubnetCAZ:
+  #   Value: !GetAtt PrivateSubnetC.AvailabilityZone
+  # PrivateSubnetC-Ipv6CidrBlocks:
+  #   Value: !GetAtt PrivateSubnetC.Ipv6CidrBlocks
+  PrivateSubnetCNetworkAclId:
+    Value: !GetAtt PrivateSubnetC.NetworkAclAssociationId
+    Export:
+      Name: !Sub "${PJName}-PrivateSubnet-C-NetworkACLId"
+  # PrivateSubnetCOutpostArn:
+  #   Value: !GetAtt PrivateSubnetC.OutpostArn
+  # PrivateSubnetCSubnetId:
+  #   Value: !GetAtt PrivateSubnetC.SubnetId
+  # PrivateSubnetCVpcId:
+  #   Value: !GetAtt PrivateSubnetC.VpcId

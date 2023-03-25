@@ -1,0 +1,137 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Session ManageCr
+Parameters:
+  # ---------------------
+  #         ENV
+  # ---------------------
+  PJName:
+    Description: Project Name 
+    Default: sample
+    Type: String
+
+  AZ1a:
+    Default: ap-northeast-1a
+    Type: String
+  # AZ1c:
+  #   Default: ap-northeast-1c
+  #   Type: String
+
+Resources:
+# -------------------------------------
+#          Security Group
+# -------------------------------------
+  SG:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: ElastiCahce SG # required
+      GroupName: !Sub "${PJName}-ElastiCache-SecurityGroup"
+      # SecurityGroupEgress: # [VPC only] 
+      #   # - Engress
+      SecurityGroupIngress:
+        - 
+          # CidrIp: String
+          # CidrIpv6: String
+          # Description: String
+          FromPort: 11211 
+          IpProtocol: tcp # required : protocol-name (tcp, udp, icmp, icmpv6) or number
+          # SourcePrefixListId: String
+          # SourceSecurityGroupId: String
+          # SourceSecurityGroupName: String
+          # SourceSecurityGroupOwnerId: String
+          ToPort: 11211
+      # Tags: # non-required
+      #   - Tag
+      VpcId: !ImportValue sample-VPCId # non-required [VPC only]
+
+# -------------------------------------
+#                Redis
+# -------------------------------------
+  SubnetGroup:
+      Type: AWS::ElastiCache::SubnetGroup
+      Properties: 
+        CacheSubnetGroupName: !Sub "${PJName}RedisSubnetGroup"
+        Description: SubnetGroup for Redis # required
+        SubnetIds: # required
+          - Fn::ImportValue: !Sub "${PJName}-PublicSubnet-A-Id"
+          # - Fn::ImportValue: !Sub "${PJName}-PublicSubnet-C-Id"
+
+  Redis:
+    DependsOn: 
+      - SubnetGroup
+      - SG
+    Type: AWS::ElastiCache::CacheCluster
+    Properties: 
+      AutoMinorVersionUpgrade: true # non-required : True or False
+      AZMode: single-az # non-required : cross-az | single-az
+      CacheNodeType: cache.t2.micro # required
+      # CacheParameterGroupName: String # non-required
+      # CacheSecurityGroupNames: # non-required
+      #   - String
+      CacheSubnetGroupName: !Sub "${PJName}RedisSubnetGroup" # non-required
+      ClusterName: !Sub "${PJName}RedisCluster" # non-required
+      Engine: redis # required : memcached | redis
+      # EngineVersion: String # non-required
+      # IpDiscovery: String # non-required : ipv4 | ipv6
+      # LogDeliveryConfigurations:  # non-required
+      #   - LogDeliveryConfigurationRequest
+      # NetworkType: String # non-required : ipv4 | ipv6 | dual_stack
+      # NotificationTopicArn: String # non-required
+      NumCacheNodes: 1 # required
+      # Port: Integer # non-required
+      PreferredAvailabilityZone: !Ref AZ1a # non-required
+      # PreferredAvailabilityZones: # non-required
+      #   - !Ref AZ1a
+      #   - !Ref AZ1c
+      # PreferredMaintenanceWindow: String # non-required
+      # SnapshotArns: # non-required
+      #   - String
+      # SnapshotName: String # non-required
+      # SnapshotRetentionLimit: Integer # non-required
+      # SnapshotWindow: String # non-required
+      # Tags: # non-required
+      #   - Tag
+      # TransitEncryptionEnabled: Boolean # non-required
+      VpcSecurityGroupIds: # non-required
+        - !GetAtt SG.GroupId
+
+Outputs:
+  # ---------------------
+  #         SG
+  # ---------------------
+  SGResourceName:
+    Value: !Ref SG
+    Export:
+      Name: !Sub "${PJName}-SG-ResourceName"
+  SGGroupId:
+    Value: !GetAtt SG.GroupId
+    Export:
+      Name: !Sub "${PJName}-SG-GroupId"
+  # SGVpcId:
+  #   Value: !GetAtt SG.VpcId
+  # ---------------------
+  #         Redis
+  # ---------------------
+  RedisSubnetGroupId:
+    Value: !Ref SubnetGroup
+    Export:
+      Name: !Sub "${PJName}-Redis-SunetGroupId"
+  RedisResourceName:
+    Value: !Ref Redis
+    Export:
+      Name: !Sub "${PJName}-Redis-ResourceName"
+  # RedisCidrBlockAssociations:
+  #   Value: !GetAtt Redis.ConfigurationEndpoint.Address # unsupported for Redis-Cluster
+  #   Export:
+  #     Name: !Sub ${PJName}-Redis-ConfigureEndpoint-Address
+  # RedisCidrBlock:
+  #   Value: !GetAtt Redis.ConfigurationEndpoint.Port
+  #   Export:
+  #     Name: !Sub "${PJName}-Redis-ConfigureEndpoint-Port"
+  RedisEndpointAddress:
+    Value: !GetAtt Redis.RedisEndpoint.Address
+    Export:
+      Name: !Sub "${PJName}-Redis-Endpoint-Address"
+  RedisEndpointPort:
+    Value: !GetAtt Redis.RedisEndpoint.Port
+    Export:
+      Name: !Sub "${PJName}-Redis-Endpoint-Port"

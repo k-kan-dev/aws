@@ -1,0 +1,546 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Aurora postgressSQL for test
+Parameters:
+  # ---------------------
+  #         Common
+  # ---------------------
+  AZ1a:
+    Default: ap-northeast-1a
+    Type: String
+  AZ1c:
+    Default: ap-northeast-1c
+    Type: String
+
+  PJName:
+    Description: Project Name 
+    Default: POC
+    Type: String
+  
+  PJNameLower:
+    Description: Project Name 
+    Default: poc
+    Type: String
+  
+  Usage:
+    Default: log
+    Type: String
+
+  # ---------------------
+  #         Aurora
+  # ---------------------
+  DBName:
+    Type: String
+    Default: poctestdb
+
+  DBMasterUserName:
+    Description: Please enter the name of the master user on an RDS.
+    Type: String
+    Default: master
+
+  DBMasterUserPassword:
+    Description: Please enter the password of the master user on an RDS. That should be greater or equal to 8 characters.
+    Type: String
+    Default: pocnqstestdb001
+
+  DBClusterIdentifier:
+    Type: String
+    Description: Identifier used for DB cluster
+    Default: POCNQSTESTDBCluster
+    AllowedPattern: '^[a-zA-Z]{1}(?:-?[a-zA-Z0-9]){0,62}$'
+
+  ReplicationSourceIdentifier:
+    Type: String
+    Description: Identifier used for DB replication source
+    Default: nqsreplicatonsource001
+    AllowedPattern: '^[a-zA-Z]{1}(?:-?[a-zA-Z0-9]){0,62}$'
+# Conditions:
+#   isBrandNewDB: !Equals [ !Ref DBSnapshotArn, "" ]
+#   enableMultiAz: !Equals [ !Ref EnableMultiAz, "true" ]
+
+Resources:
+# -------------------------------------
+#                 Aurora
+# -------------------------------------
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties: 
+      DBSubnetGroupDescription: !Sub "${PJName}-${Usage}-DBSubnetGroup"
+      DBSubnetGroupName: !Sub "${PJName}-${Usage}-DBSubnetGroup"
+      SubnetIds: 
+        - Fn::ImportValue: !Sub ${PJName}-PrivateSubnet-A-Id
+        - Fn::ImportValue: !Sub ${PJName}-PrivateSubnet-C-Id
+      # Tags: 
+      #   - Tag
+
+  DBCluster:
+    DependsOn: DBSubnetGroup
+    Type: AWS::RDS::DBCluster
+    Properties: 
+      # AllocatedStorage: Integer
+      # AssociatedRoles: 
+      #   - DBClusterRole
+      # AutoMinorVersionUpgrade: Boolean
+      AvailabilityZones:
+        - !Ref AZ1a
+        # - !Ref AZ1c
+      # BacktrackWindow: Integer
+      BackupRetentionPeriod: 1 # Default: 1
+      # CopyTagsToSnapshot: Boolean
+      DatabaseName: !Ref DBName
+      DBClusterIdentifier: !Ref DBClusterIdentifier
+      # DBClusterInstanceClass: String
+      # DBClusterParameterGroupName: String
+      # DBInstanceParameterGroupName: String
+      DBSubnetGroupName: !Sub "${PJName}-${Usage}-DBSubnetGroup"
+      # DBSystemId: String
+      # DeletionProtection: Boolean
+      # Domain: String
+      # DomainIAMRoleName: String
+      EnableCloudwatchLogsExports: 
+        - postgresql
+      EnableHttpEndpoint: true
+      # EnableIAMDatabaseAuthentication: Boolean
+      Engine: aurora-postgresql
+      # EngineMode: String
+      EngineVersion: 14.6
+      # GlobalClusterIdentifier: String
+      # Iops: Integer
+      # KmsKeyId: String
+      # ManageMasterUserPassword: Boolean
+      MasterUsername: !Ref DBMasterUserName # Conditional
+      MasterUserPassword: !Ref DBMasterUserPassword ###
+      # MasterUserSecret: 
+      #   MasterUserSecret
+      # MonitoringInterval: Integer
+      # MonitoringRoleArn: String
+      # NetworkType: String
+      # PerformanceInsightsEnabled: Boolean
+      # PerformanceInsightsKmsKeyId: String
+      # PerformanceInsightsRetentionPeriod: Integer
+      Port: 5432
+      # PreferredBackupWindow: String
+      # PreferredMaintenanceWindow: String
+      # PubliclyAccessible: false
+      # ReplicationSourceIdentifier: !Ref ReplicationSourceIdentifier
+      # RestoreType: String
+      # ScalingConfiguration: 
+      #   ScalingConfiguration
+      # ServerlessV2ScalingConfiguration: 
+      #   ServerlessV2ScalingConfiguration
+      # SnapshotIdentifier: String
+      # SourceDBClusterIdentifier: !Sub "${PJNameLower}-${Usage}-db-cluster"
+      # SourceRegion: String
+      # StorageEncrypted: Boolean
+      # StorageType: String
+      # Tags: 
+      #   - Tag
+      # UseLatestRestorableTime: Boolean
+      VpcSecurityGroupIds: 
+        - Fn::ImportValue: !Sub "${PJName}-SGResourceId"
+
+  ReplicaDBCluster:
+    DependsOn: DBCluster
+    Type: AWS::RDS::DBCluster
+    Properties: 
+      # AllocatedStorage: Integer
+      # AssociatedRoles: 
+      #   - DBClusterRole
+      # AutoMinorVersionUpgrade: Boolean
+      AvailabilityZones:
+        # - !Ref AZ1a
+        - !Ref AZ1c
+      # BacktrackWindow: Integer
+      # BackupRetentionPeriod: Integer # Default: 1
+      # CopyTagsToSnapshot: Boolean
+      DatabaseName: !Sub  replica-${DBName}
+      # DBClusterIdentifier: !Ref DBClusterIdentifier
+      # DBClusterInstanceClass: String
+      # DBClusterParameterGroupName: String
+      # DBInstanceParameterGroupName: String
+      DBSubnetGroupName: !Sub "${PJName}-${Usage}-DBSubnetGroup"
+      # DBSystemId: String
+      # DeletionProtection: Boolean
+      # Domain: String
+      # DomainIAMRoleName: String
+      EnableCloudwatchLogsExports: 
+        - postgresql
+      EnableHttpEndpoint: true
+      # EnableIAMDatabaseAuthentication: Boolean
+      Engine: aurora-postgresql
+      # EngineMode: String
+      EngineVersion: 14.6
+      # GlobalClusterIdentifier: String
+      # Iops: Integer
+      # KmsKeyId: String
+      # ManageMasterUserPassword: Bool　ean
+      MasterUsername: !Ref DBMasterUserName # Conditional
+      MasterUserPassword: !Ref DBMasterUserPassword ###
+      # MasterUserSecret: 
+      #   MasterUserSecret
+      # MonitoringInterval: Integer
+      # MonitoringRoleArn: String
+      # NetworkType: String
+      # PerformanceInsightsEnabled: Boolean
+      # PerformanceInsightsKmsKeyId: String
+      # PerformanceInsightsRetentionPeriod: Integer
+      Port: 5432
+      # PreferredBackupWindow: String
+      # PreferredMaintenanceWindow: String
+      # PubliclyAccessible: false
+      ReplicationSourceIdentifier: !GetAtt DBCluster.DBClusterArn
+      # RestoreType: String
+      # ScalingConfiguration: 
+      #   ScalingConfiguration
+      # ServerlessV2ScalingConfiguration: 
+      #   ServerlessV2ScalingConfiguration
+      # SnapshotIdentifier: String
+      # SourceDBClusterIdentifier: !Sub "${PJNameLower}-${Usage}-db-cluster"
+      # SourceRegion: String
+      # StorageEncrypted: Boolean
+      # StorageType: String
+      # Tags: 
+      #   - Tag
+      # UseLatestRestorableTime: Boolean
+      VpcSecurityGroupIds: 
+        - Fn::ImportValue: !Sub "${PJName}-SGResourceId"
+
+  DBInstance:
+    DependsOn: DBCluster
+    Type: AWS::RDS::DBInstance
+    Properties: 
+      # AllocatedStorage: String
+      # AllowMajorVersionUpgrade: Boolean
+      # AssociatedRoles: 
+      #   - DBInstanceRole
+      # AutoMinorVersionUpgrade: Boolean
+      AvailabilityZone: !Ref AZ1a
+      # BackupRetentionPeriod: 1
+      # CACertificateIdentifier: String
+      # CertificateDetails: 
+      #   CertificateDetails
+      # CertificateRotationRestart: Boolean
+      # CharacterSetName: String
+      # CopyTagsToSnapshot: Boolean
+      # CustomIAMInstanceProfile: String
+      DBClusterIdentifier: !Ref DBCluster
+      # DBClusterSnapshotIdentifier: String
+      DBInstanceClass: db.r5.large
+      DBInstanceIdentifier: !Sub "${PJName}-${Usage}-DB" 
+      # DBName: !Ref DBName
+      # DBParameterGroupName: String
+      # DBSecurityGroups: 
+      #   - String
+      # DBSnapshotIdentifier: String
+      DBSubnetGroupName: !Sub "${PJName}-${Usage}-DBSubnetGroup"
+      # DeleteAutomatedBackups: Boolean
+      # DeletionProtection: Boolean
+      # Domain: String
+      # DomainIAMRoleName: String
+      # EnableCloudwatchLogsExports: 
+      #   - String
+      # EnableIAMDatabaseAuthentication: Boolean
+      EnablePerformanceInsights: false ###
+      # Endpoint: 
+      #   Address: String
+      #   HostedZoneId: String
+      #   Port: String
+      Engine: aurora-postgresql # required
+      EngineVersion: 14.6
+      # Iops: Integer
+      # KmsKeyId: String
+      # LicenseModel: String
+      # ManageMasterUserPassword: Boolean
+      # MasterUsername: !Ref DBMasterUserName
+      # MasterUserPassword: !Ref DBMasterUserPassword
+      # MasterUserSecret: 
+      #   MasterUserSecret
+      # MaxAllocatedStorage: 65536
+      MonitoringInterval: 0 ### 0 means invalid
+      # MonitoringRoleArn: String
+      MultiAZ: false
+      # NcharCharacterSetName: String
+      # NetworkType: IPV4 # IPV4 or DUAL
+      # OptionGroupName: String 
+      # PerformanceInsightsKMSKeyId: String
+      # PerformanceInsightsRetentionPeriod: Integer
+      # Port: String
+      # PreferredBackupWindow: String
+      # PreferredMaintenanceWindow: String
+      # ProcessorFeatures: 
+      #   - ProcessorFeature
+      PromotionTier: 0 # default: 1
+      PubliclyAccessible: false
+      # ReplicaMode: open-read-only # default: open-read-only.  open-read-only or mounted
+      # RestoreTime: String
+      # SourceDBInstanceAutomatedBackupsArn: String
+      # SourceDBInstanceIdentifier: String
+      # SourceDbiResourceId: String
+      # SourceRegion: String
+      # StorageEncrypted: Boolean
+      # StorageThroughput: Integer
+      # StorageType: String
+      # Tags: 
+      #   - Tag
+      # Timezone: String
+      # UseDefaultProcessorFeatures: Boolean
+      # UseLatestRestorableTime: Boolean
+      # VPCSecurityGroups: 
+      #   - String
+
+  DBInstance2:
+    DependsOn: DBCluster
+    Type: AWS::RDS::DBInstance
+    Properties: 
+      # AllocatedStorage: String
+      # AllowMajorVersionUpgrade: Boolean
+      # AssociatedRoles: 
+      #   - DBInstanceRole
+      # AutoMinorVersionUpgrade: Boolean
+      AvailabilityZone: !Ref AZ1a
+      # BackupRetentionPeriod: 1
+      # CACertificateIdentifier: String
+      # CertificateDetails: 
+      #   CertificateDetails
+      # CertificateRotationRestart: Boolean
+      # CharacterSetName: String
+      # CopyTagsToSnapshot: Boolean
+      # CustomIAMInstanceProfile: String
+      DBClusterIdentifier: !Ref DBCluster
+      # DBClusterSnapshotIdentifier: String
+      DBInstanceClass: db.r5.large
+      DBInstanceIdentifier: !Sub "${PJName}-${Usage}-DB2" 
+      # DBName: !Ref DBName
+      # DBParameterGroupName: String
+      # DBSecurityGroups: 
+      #   - String
+      # DBSnapshotIdentifier: String
+      DBSubnetGroupName: !Sub "${PJName}-${Usage}-DBSubnetGroup"
+      # DeleteAutomatedBackups: Boolean
+      # DeletionProtection: Boolean
+      # Domain: String
+      # DomainIAMRoleName: String
+      # EnableCloudwatchLogsExports: 
+      #   - String
+      # EnableIAMDatabaseAuthentication: Boolean
+      EnablePerformanceInsights: false ###
+      # Endpoint: 
+      #   Address: String
+      #   HostedZoneId: String
+      #   Port: String
+      Engine: aurora-postgresql # required
+      EngineVersion: 14.6
+      # Iops: Integer
+      # KmsKeyId: String
+      # LicenseModel: String
+      # ManageMasterUserPassword: Boolean
+      # MasterUsername: !Ref DBMasterUserName
+      # MasterUserPassword: !Ref DBMasterUserPassword
+      # MasterUserSecret: 
+      #   MasterUserSecret
+      # MaxAllocatedStorage: 65536
+      MonitoringInterval: 0 ### 0 means invalid
+      # MonitoringRoleArn: String
+      MultiAZ: false
+      # NcharCharacterSetName: String
+      # NetworkType: IPV4 # IPV4 or DUAL
+      # OptionGroupName: String 
+      # PerformanceInsightsKMSKeyId: String
+      # PerformanceInsightsRetentionPeriod: Integer
+      # Port: String
+      # PreferredBackupWindow: String
+      # PreferredMaintenanceWindow: String
+      # ProcessorFeatures: 
+      #   - ProcessorFeature
+      PromotionTier: 0 # default: 1
+      PubliclyAccessible: false
+      # ReplicaMode: open-read-only # default: open-read-only.  open-read-only or mounted
+      # RestoreTime: String
+      # SourceDBInstanceAutomatedBackupsArn: String
+      # SourceDBInstanceIdentifier: String
+      # SourceDbiResourceId: String
+      # SourceRegion: String
+      # StorageEncrypted: Boolean
+      # StorageThroughput: Integer
+      # StorageType: String
+      # Tags: 
+      #   - Tag
+      # Timezone: String
+      # UseDefaultProcessorFeatures: Boolean
+      # UseLatestRestorableTime: Boolean
+      # VPCSecurityGroups: 
+      #   - String
+
+  # ReadReplicaDBInstance:
+  #   DependsOn: DBInstance
+  #   Type: AWS::RDS::DBInstance
+  #   Properties: 
+  #     # AllocatedStorage: String
+  #     # AllowMajorVersionUpgrade: Boolean
+  #     # AssociatedRoles: 
+  #     #   - DBInstanceRole
+  #     # AutoMinorVersionUpgrade: Boolean
+  #     AvailabilityZone: !Ref AZ1a
+  #     # BackupRetentionPeriod: 1
+  #     # CACertificateIdentifier: String
+  #     # CertificateDetails: 
+  #     #   CertificateDetails
+  #     # CertificateRotationRestart: Boolean
+  #     # CharacterSetName: String
+  #     # CopyTagsToSnapshot: Boolean
+  #     # CustomIAMInstanceProfile: String
+  #     DBClusterIdentifier: !GetAtt DBCluster.DBClusterArn
+  #     # DBClusterSnapshotIdentifier: String
+  #     DBInstanceClass: db.r5.large
+  #     DBInstanceIdentifier: !Sub "${PJName}-${Usage}-readreplica-DBInstance" 
+  #     # DBName: !Ref DBName
+  #     # DBParameterGroupName: String
+  #     # DBSecurityGroups: 
+  #     #   - String
+  #     # DBSnapshotIdentifier: String
+  #     DBSubnetGroupName: !Sub "${PJName}-${Usage}-DBSubnetGroup"
+  #     # DeleteAutomatedBackups: Boolean
+  #     # DeletionProtection: Boolean
+  #     # Domain: String
+  #     # DomainIAMRoleName: String
+  #     # EnableCloudwatchLogsExports: 
+  #     #   - String
+  #     # EnableIAMDatabaseAuthentication: Boolean
+  #     EnablePerformanceInsights: false ###
+  #     # Endpoint: 
+  #     #   Address: String
+  #     #   HostedZoneId: String
+  #     #   Port: String
+  #     Engine: aurora-postgresql # required
+  #     EngineVersion: 14.6
+  #     # Iops: Integer
+  #     # KmsKeyId: String
+  #     # LicenseModel: String
+  #     # ManageMasterUserPassword: Boolean
+  #     # MasterUsername: !Ref DBMasterUserName
+  #     # MasterUserPassword: !Ref DBMasterUserPassword
+  #     # MasterUserSecret: 
+  #     #   MasterUserSecret
+  #     # MaxAllocatedStorage: 65536
+  #     MonitoringInterval: 0 ### 0 means invalid
+  #     # MonitoringRoleArn: String
+  #     MultiAZ: false
+  #     # NcharCharacterSetName: String
+  #     # NetworkType: IPV4 # IPV4 or DUAL
+  #     # OptionGroupName: String 
+  #     # PerformanceInsightsKMSKeyId: String
+  #     # PerformanceInsightsRetentionPeriod: Integer
+  #     # Port: String
+  #     # PreferredBackupWindow: String
+  #     # PreferredMaintenanceWindow: String
+  #     # ProcessorFeatures: 
+  #     #   - ProcessorFeature
+  #     PromotionTier: 0 # default: 1
+  #     PubliclyAccessible: false
+  #     ReplicaMode: open-read-only # default: open-read-only.  open-read-only or mounted
+  #     # RestoreTime: String
+  #     # SourceDBInstanceAutomatedBackupsArn: String
+  #     SourceDBInstanceIdentifier: !GetAtt DBInstance.DBInstanceArn
+  #     # SourceDbiResourceId: String
+  #     # SourceRegion: String
+  #     # StorageEncrypted: Boolean
+  #     # StorageThroughput: Integer
+  #     StorageType: gp2
+  #     # Tags: 
+  #     #   - Tag
+  #     # Timezone: String
+  #     # UseDefaultProcessorFeatures: Boolean
+  #     # UseLatestRestorableTime: Boolean
+  #     # VPCSecurityGroups: 
+  #     #   - String
+
+Outputs:
+# -------------------------------------
+#                 RDS
+# -------------------------------------
+  # -------------------------------------
+  #            SubnetGroupId
+  # -------------------------------------
+  DBSubnetGroupId:
+    Value: !Ref DBSubnetGroup
+    Export:
+      Name: !Sub ${PJName}-${Usage}-DBSubnetGroupId
+
+  # -------------------------------------
+  #              DBCluster
+  # -------------------------------------
+  DBClusterId:
+    Value: !Ref DBCluster
+    Export:
+      Name: !Sub ${PJName}-${Usage}-DBCluster-Id
+  DBClusterArn:
+    Value: !GetAtt DBCluster.DBClusterArn
+    Export:
+      Name: !Sub ${PJName}-${Usage}-DBCluster-Arn
+  DBClusterResourceId:
+    Value: !GetAtt DBCluster.DBClusterResourceId
+    Export:
+      Name: !Sub ${PJName}-${Usage}-DBCluster-ResourceId
+  # DBClusterEndpoint:
+  #   Value: !GetAtt DBCluster.Endpoint
+  #   Export:
+  #     Name: !Sub ${PJName}-${Usage}-DBCluster-Endpoint
+  DBClusterEndpointWriterAddress:
+    Value: !GetAtt DBCluster.Endpoint.Address
+    Export:
+      Name: !Sub ${PJName}-${Usage}-DBCluster-Endpoint-WriterAddress
+  DBClusterEndpointPort:
+    Value: !GetAtt DBCluster.Endpoint.Port
+    Export:
+      Name: !Sub ${PJName}-${Usage}-DBCluster-Port
+  # DBClusterMasterUserSecretArn:
+  #   Value: !GetAtt DBCluster.MasterUserSecret.SecretArn
+  #   Export:
+  #     Name: !Sub ${PJName}-${Usage}-DBCluster-MasterUserSecretArn
+  DBClusterEndpointReaderAddress:
+    Value: !GetAtt DBCluster.ReadEndpoint.Address
+    Export:
+      Name: !Sub ${PJName}-${Usage}-DBCluster-Endpoint-ReaderAddress
+
+  # -------------------------------------
+  #            DBInstance
+  # -------------------------------------
+  DBInstanceName:
+    Value: !Ref DBInstance
+    Export:
+      Name: !Sub ${PJName}-${Usage}-DBInstance-Name
+  # DBInstanceCDCAIdentifier:
+  #   Value: !GetAtt DBInstance.CertificateDetails.CAIdentifier
+  #   Export:
+  #     Name: !Sub ${PJName}-${Usage}-DBInstance-CD-CAIdentifier
+  # DBInstanceCDValidTill:
+  #   Value: !GetAtt DBInstance.CertificateDetails.ValidTill
+  #   Export:
+  #     Name: !Sub ${PJName}-${Usage}-DBInstance-CD-ValidTill
+  DBInstanceArn:
+    Value: !GetAtt DBInstance.DBInstanceArn
+    Export:
+      Name: !Sub ${PJName}-${Usage}-DBInstance-Arn
+  DBInstanceResourceId:
+    Value: !GetAtt DBInstance.DbiResourceId
+    Export:
+      Name: !Sub ${PJName}-${Usage}-DBInstance-ResourceId
+  # DBInstanceDBSystemId:
+  #   Value: !GetAtt DBInstance.DBSystemId
+  #   Export:
+  #     Name: !Sub ${PJName}-${Usage}-DBInstance-DBSystemId
+  DBInstanceEndpointAddress:
+    Value: !GetAtt DBInstance.Endpoint.Address
+    Export:
+      Name: !Sub ${PJName}-${Usage}-DBInstance-Endpoint-Address
+  DBInstanceEndpointHostedZoneId:
+    Value: !GetAtt DBInstance.Endpoint.HostedZoneId
+    Export:
+      Name: !Sub ${PJName}-${Usage}-DBInstance-Endpoint-HostedZoneId
+  DBInstanceEndpointPort:
+    Value: !GetAtt DBInstance.Endpoint.Port
+    Export:
+      Name: !Sub ${PJName}-${Usage}-DBInstance-Endpoint-Port
+  # DBInstanceMasterUserSecretArn:
+  #   Value: !GetAtt DBInstance.MasterUserSecret.SecretArn
+  #   Export:
+  #     Name: !Sub ${PJName}-${Usage}-DBInstance-MasterUserSecretArn

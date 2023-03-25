@@ -1,0 +1,49 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Log
+Parameters:
+  # ---------------------
+  #         ENV
+  # ---------------------
+  PJName:
+    Description: Project Name 
+    Default: POC
+    Type: String
+
+  # ---------------------
+  #         SQS
+  # ---------------------
+  SQS:
+    Default: 
+    Type: String
+
+Resources:
+# -------------------------------------
+#                SQS
+# -------------------------------------
+  SQS_Log:
+    Type: AWS::SQS::Queue
+    Properties: 
+      ContentBasedDeduplication: Boolean
+      DeduplicationScope: String
+      DelaySeconds: Integer
+      FifoQueue: Boolean
+      FifoThroughputLimit: String
+      KmsDataKeyReusePeriodSeconds: Integer
+      KmsMasterKeyId: String
+      MaximumMessageSize: Integer
+      MessageRetentionPeriod: Integer
+      QueueName: String
+      ReceiveMessageWaitTimeSeconds: Integer
+      RedriveAllowPolicy: Json
+      RedrivePolicy: Json
+      SqsManagedSseEnabled: Boolean
+      Tags: 
+        - Tag
+      VisibilityTimeout: Integer
+
+Outputs:
+  # ---------------------
+  # 
+  # ---------------------
+
+  

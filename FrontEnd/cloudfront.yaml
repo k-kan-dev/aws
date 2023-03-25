@@ -1,0 +1,451 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: CloudFront-and-S3
+Parameters:
+  # ---------------------
+  #         ENV
+  # ---------------------
+  PJName:
+    Description: Project Name 
+    Default: sample
+    Type: String
+
+  Usage:
+    Default: Front
+    Type: String
+
+  # ---------------------
+  #       Cloudfront
+  # ---------------------
+  # CloudFront:
+  #   Default: "10.2.0.0/16"
+  #   Type: String
+
+  # ---------------------
+  #          S3
+  # ---------------------
+  bucketName:
+    Default: frontend-resources
+    Type: String
+
+  # ---------------------
+  #          KMS
+  # ---------------------
+  # IAMUserARN:
+  #   Type: String
+
+Resources:
+# -------------------------------------
+#             CloudFront
+# -------------------------------------
+  # OAC:
+  #   Type: AWS::CloudFront::OriginAccessControl
+  #   Properties: 
+  #     OriginAccessControlConfig: # required
+  #       Description: OriginAccessControl
+  #       Name: !Sub "${PJName}-${Usage}-OAC" # required
+  #       OriginAccessControlOriginType: s3 # required : mediastore | s3
+  #       SigningBehavior: always # required: always | never | no-override
+  #       SigningProtocol: sigv4 # required: sigv4
+  CloudFrontOriginAccessIdentity:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties: 
+      CloudFrontOriginAccessIdentityConfig: 
+          Comment: !Ref AWS::StackName # required
+
+  CloudFrontCachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties: 
+      CachePolicyConfig: 
+        Comment: !Sub "for CloudFront for ${PJName}-${Usage}"
+        DefaultTTL: 3600 # required :Unit -> second:  3400 means 1 hour
+        MaxTTL: 86400 # required    :Unit -> second: 86400 means 1 day
+        MinTTL: 60  # required      :Unit -> second:    60 means 1 minute
+        Name: !Sub "CloudFront-for-${PJName}-${Usage}" # required
+        ParametersInCacheKeyAndForwardedToOrigin: # required
+          CookiesConfig: # required
+            CookieBehavior: all # required : all | allExcept | none | whitelist
+            # Cookies: 
+            #   - String
+          # EnableAcceptEncodingBrotli: Boolean 
+          EnableAcceptEncodingGzip: true # required
+          HeadersConfig: # required
+            HeaderBehavior: none # required : all | allExcept | none | whitelist
+            # Headers:
+            #   - String
+          QueryStringsConfig: # required
+            QueryStringBehavior: none # required : all | allExcept | none | whitelist
+            # QueryStrings: 
+            #   - String
+
+  CloudFront:
+    DependsOn:
+      # - OAC
+      - S3
+      - CloudFrontCachePolicy
+    Type: AWS::CloudFront::Distribution
+    Properties: 
+      DistributionConfig: # required
+        # Aliases: 
+        #   - String
+        # CacheBehaviors: 
+        #   - CacheBehavior
+        # CNAMEs: 
+        #   - String
+        Comment: !Sub "for frontend of ${PJName}"
+        # ContinuousDeploymentPolicyId: String
+        # CustomErrorResponses: 
+        #   - CustomErrorResponse
+        # CustomOrigin: 
+        #   LegacyCustomOrigin
+        DefaultCacheBehavior: # required
+          AllowedMethods:
+            - GET
+            - HEAD
+          CachedMethods:
+            - GET
+            - HEAD
+          CachePolicyId: !Ref CloudFrontCachePolicy
+          Compress: true
+          # DefaultTTL: Double
+          # FieldLevelEncryptionId: String
+          # ForwardedValues: 
+          #   ForwardedValues
+          # FunctionAssociations: 
+          #   - FunctionAssociation
+          # LambdaFunctionAssociations: 
+          #   - LambdaFunctionAssociation
+          # MaxTTL: Double
+          # MinTTL: Double
+          # OriginRequestPolicyId: String
+          # RealtimeLogConfigArn: String
+          # ResponseHeadersPolicyId: String
+          # SmoothStreaming: Boolean
+          TargetOriginId: S3 # required
+          # TrustedKeyGroups: 
+          #   - String
+          # TrustedSigners: # un-recommended
+          #   - String
+          ViewerProtocolPolicy: allow-all # required : allow-all | https-only | redirect-to-https
+        DefaultRootObject: index.html
+        Enabled: true # required
+        HttpVersion: http2 # http1.1 | http2 | http2and3 | http3
+        # IPV6Enabled: Boolean
+        # Logging: 
+        #   Logging
+        # OriginGroups: 
+        #     Items: 
+        #       - FailoverCriteria: 
+        #           OriginGroupFailoverCriteria # required
+        #         Id: String # required
+        #         Members: 
+        #           OriginGroupMembers # required
+        #     Quantity: Integer # required
+        Origins: 
+          - DomainName: !GetAtt S3.DomainName # required
+            # ConnectionAttempts: Integer
+            # ConnectionTimeout: Integer
+            # CustomOriginConfig: 
+            #   HTTPPort: Integer
+            #   HTTPSPort: Integer
+            #   OriginKeepaliveTimeout: Integer
+            #   OriginProtocolPolicy: String # required : http-only | https-only | match-viewer
+            #   OriginReadTimeout: Integer
+            #   OriginSSLProtocols: 
+            #     - String
+            Id: S3 # required
+            # OriginAccessControlId: !GetAtt OAC.Id
+            # OriginCustomHeaders: 
+            #   - OriginCustomHeader
+            # OriginPath: String
+            # OriginShield: 
+            #   OriginShield
+            S3OriginConfig: 
+              # OriginAccessIdentity: ''
+              OriginAccessIdentity: !Sub origin-access-identity/cloudfront/${CloudFrontOriginAccessIdentity}
+        PriceClass: PriceClass_All  # PriceClass_100 | PriceClass_200 | PriceClass_All
+        # Restrictions: 
+        #   Restrictions
+        # S3Origin: 
+        #   LegacyS3Origin
+        # Staging: Boolean
+        # ViewerCertificate: 
+        #   ViewerCertificate
+        # WebACLId: String
+      # Tags: 
+      #   - Tag
+
+# # -------------------------------------
+# #                KMS
+# # -------------------------------------
+#   KMS:
+#     DependsOn: CloudFront
+#     Type: AWS::KMS::Key
+#     Properties: 
+#       Description: OAC Test
+#       Enabled: true
+#       # EnableKeyRotation: Boolean
+#       KeyPolicy: 
+#         Version: '2012-10-17'
+#         Statement: 
+#           # - Sid: Enable IAM User Permissions
+#           #   Effect: Allow
+#           #   Principal: 
+#           #     AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+#           #   Action: 'kms:*'
+#           #   Resource: '*'
+#           # - Sid: 'Allow access for Key Administrators'
+#           #   Effect: Allow
+#           #   Principal: 
+#           #     AWS: !Ref IAMUserARN
+#           #   Action: 
+#           #     - 'kms:Create*'
+#           #     - 'kms:Describe*'
+#           #     - 'kms:Enable*'
+#           #     - 'kms:List*'
+#           #     - 'kms:Put*'
+#           #     - 'kms:Update*'
+#           #     - 'kms:Revoke*'
+#           #     - 'kms:Disable*'
+#           #     - 'kms:Get*'
+#           #     - 'kms:Delete*'
+#           #     # - 'kms:TagResource'
+#           #     # - 'kms:UntagResource'
+#           #     - 'kms:ScheduleKeyDeletion'
+#           #     - 'kms:CancelKeyDeletion'
+#           #     # - 'kms:CreateGrant'
+#           #     # - 'kms:ListGrants'
+#           #     # - 'kms:RevokeGrant'
+#           #   Resource: '*'
+#           # - Sid: 'Allow use of the key'
+#           #   Effect: Allow
+#           #   Principal: 
+#           #     AWS: !Ref IAMUserARN
+#           #   Action: 
+#           #     - 'kms:DescribeKey'
+#           #     - 'kms:Encrypt'
+#           #     - 'kms:Decrypt'
+#           #     - 'kms:ReEncrypt*'
+#           #     - 'kms:GenerateDataKey'
+#           #     # - 'kms:GenerateDataKeyWithoutPlaintext'
+#           #   Resource: '*'
+#           - Sid: 'Allow use of the key'
+#             Effect: Allow
+#             Principal: 
+#               Service: 
+#                 - cloudfront.amazonaws.com
+#             Action: 
+#               - 'kms:Decrypt'
+#               - 'kms:Encrypt'
+#               - 'kms:GenerateDataKey*'
+#             Resource: '*'
+#             Condition: 
+#               StringEquals:
+#                 aws:SourceArn:
+#                   - !Join 
+#                     - ''
+#                     - - !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/'
+#                       - !GetAtt CloudFront.Id
+#       # KeySpec: String
+#       # KeyUsage: String
+#       # MultiRegion: Boolean
+#       PendingWindowInDays: 7
+#       # Tags: 
+#       #   - Tag
+
+# -------------------------------------
+#                 S3
+# -------------------------------------
+  S3:
+    Type: AWS::S3::Bucket
+    Properties:
+      # AccelerateConfiguration: 
+      #   AccelerateConfiguration
+      AccessControl: Private # Private, PublicRead, PublicReadWrite, AuthenticatedRead, LogDeliveryWrite, BucketOwnerRead, BucketOwnerFullControl, or AwsExecRead.
+      # AnalyticsConfigurations: 
+      #   - AnalyticsConfiguration
+      # BucketEncryption:
+      #   ServerSideEncryptionConfiguration:
+      #     - BucketKeyEnabled: true
+      #       ServerSideEncryptionByDefault:
+      #         KMSMasterKeyID: !Ref KMS
+      #         SSEAlgorithm: aws:kms
+      BucketName: !Ref bucketName # required
+      # CorsConfiguration: 
+      #   CorsConfiguration
+      # IntelligentTieringConfigurations: 
+      #   - IntelligentTieringConfiguration
+      # InventoryConfigurations: 
+      #   - InventoryConfiguration
+      # LifecycleConfiguration: 
+      #   LifecycleConfiguration
+      # LoggingConfiguration: 
+      #   LoggingConfiguration
+      # MetricsConfigurations: 
+      #   - MetricsConfiguration
+      # NotificationConfiguration: 
+      #   NotificationConfiguration
+      # ObjectLockConfiguration: 
+      #   ObjectLockConfiguration
+      # ObjectLockEnabled: Boolean
+      # OwnershipControls: 
+      #   OwnershipControls
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+        # BlockPublicAcls: False
+        # BlockPublicPolicy: False
+        # IgnorePublicAcls: False
+        # RestrictPublicBuckets: False
+      # ReplicationConfiguration: 
+      #   ReplicationConfiguration
+      # Tags: 
+      #   - Tag
+      # VersioningConfiguration: 
+      #   VersioningConfiguration
+      WebsiteConfiguration:
+        # ErrorDocument: String
+        IndexDocument: index.html
+        # RedirectAllRequestsTo: 
+        #   RedirectAllRequestsTo
+        # RoutingRules: 
+        #   - RoutingRule
+
+  S3BucketPolicy:
+    DependsOn: 
+     - CloudFront
+     - S3
+    Type: AWS::S3::BucketPolicy
+    Properties: 
+      Bucket: !Ref S3
+      PolicyDocument: 
+        Version: "2008-10-17"
+        Statement: 
+          - Sid: "AllowCloudFrontServicePrincipal"
+            Effect: "Allow"
+            Principal: "*"
+              # Service: 
+              #   - "cloudfront.amazonaws.com"
+            Action: 
+              - "s3:GetObject"
+            Resource: 
+              - !Join
+                - ''
+                - - Fn::GetAtt: S3.Arn
+                  - /*
+            Condition:
+              StringEquals:
+                AWS:SourceArn: 
+                  - !Join 
+                    - ''
+                    - - !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/'
+                      - !GetAtt CloudFront.Id
+          - Sid: "AllowOAI"
+            Action: s3:GetObject
+            Effect: Allow
+            Resource: !Sub arn:aws:s3:::${S3}/*
+            Principal:
+              AWS: !Sub arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${CloudFrontOriginAccessIdentity}
+          # - Sid: "PublicReadGetObject"   # Permision Denied
+          #   Effect: "Allow"
+          #   Principal: "*"
+          #   Action: 
+          #     - "s3:GetObject"
+          #   Resource: 
+          #     - !Join
+          #       - ''
+          #       - - Fn::GetAtt: S3.Arn
+          #         - /*
+
+
+
+Outputs:
+# -------------------------------------
+#              Cloudfront
+# -------------------------------------
+  # OACId:
+  #   Value: !GetAtt OAC.Id
+  #   Export:
+  #     Name: !Sub ${PJName}-${Usage}-OAC-Id
+  # OAI: # same as OAIId
+  #   Value: !Ref CloudFrontOriginAccessIdentity
+  #   Export:
+  #     Name: !Sub ${PJName}-${Usage}-OAI
+  OAIId:
+    Value: !GetAtt CloudFrontOriginAccessIdentity.Id
+    Export:
+      Name: !Sub ${PJName}-${Usage}-OAI-Id
+  OAIS3CanonicalUserId:
+    Value: !GetAtt CloudFrontOriginAccessIdentity.S3CanonicalUserId
+    Export:
+      Name: !Sub ${PJName}-${Usage}-OAC-CanonicalUserId
+
+  CFCachePolicyIdref:
+    Value: !Ref CloudFrontCachePolicy
+    Export:
+      Name: !Sub  ${PJName}-${Usage}-CF-CachePolicy-Idref
+  CFCachePolicyId:
+    Value: !GetAtt CloudFrontCachePolicy.Id
+    Export:
+      Name: !Sub ${PJName}-${Usage}-CF-CachePolicy-Id
+  CFCachePolicyLastModifiedTime:
+    Value: !GetAtt CloudFrontCachePolicy.LastModifiedTime
+    Export:
+      Name: !Sub ${PJName}-${Usage}-CF-CachePolicy-LastModifiedTime
+
+  CFDistributionId:
+    Value: !Ref CloudFront
+    Export:
+      Name: !Sub ${PJName}-${Usage}-CloudFront-distributionID
+  CFId:
+    Value: !GetAtt CloudFront.Id
+    Export:
+      Name: !Sub ${PJName}-${Usage}-CloudFront-Id
+  CFDomainName:
+    Value: !GetAtt CloudFront.DomainName
+    Export:
+      Name: !Sub ${PJName}-${Usage}-CloudFront-DomainName
+
+# # -------------------------------------
+# #              KMS
+# # -------------------------------------
+#   KMSKeyIdref:
+#     Value: !Ref KMS
+#     Export:
+#       Name: !Sub ${PJName}-${Usage}-KMS-KeyIdref
+#   KMSArn:
+#     Value: !GetAtt KMS.Arn
+#     Export:
+#       Name: !Sub ${PJName}-${Usage}-KMS-Arn
+#   KMSKeyId:
+#     Value: !GetAtt KMS.KeyId
+#     Export:
+#       Name: !Sub ${PJName}-${Usage}-KMS-KeyId
+# -------------------------------------
+#              S3
+# -------------------------------------
+  S3BucketName:
+    Value: !Ref S3
+    Export:
+      Name: !Sub ${PJName}-${Usage}-S3-BucketName
+  S3Arn:
+    Value: !GetAtt S3.Arn
+    Export:
+      Name: !Sub ${PJName}-${Usage}-S3-Arn
+  S3DomainName:
+    Value: !GetAtt S3.DomainName
+    Export:
+      Name: !Sub ${PJName}-${Usage}-S3-DomainName
+  # S3DualStackDomainName:
+  #   Value: !GetAtt S3.DualStackDomainName
+  #   Export:
+  #     Name: !Sub ${PJName}-${Usage}-S3-DualStackDomainName
+  S3RegionalDomainName:
+    Value: !GetAtt S3.RegionalDomainName
+    Export:
+      Name: !Sub ${PJName}-${Usage}-S3-RegionalDomainName
+  S3WebsiteURL:
+    Value: !GetAtt S3.WebsiteURL
+    Export:
+      Name: !Sub ${PJName}-${Usage}-S3-WebsiteURL

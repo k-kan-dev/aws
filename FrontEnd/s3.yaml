@@ -1,0 +1,106 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: just s3
+Parameters:
+  # ---------------------
+  #         ENV
+  # ---------------------
+  PJName:
+    Description: Project Name 
+    Default: Sample
+    Type: String
+
+  Usage:
+    Default: Front
+    Type: String
+
+  # ---------------------
+  #          S3
+  # ---------------------
+  bucketName:
+    Description: U NEAD TO CREATE THIS BUCKET as UNIQUE in UR REGION
+    Default: sample-bucket-blahblahblah
+    Type: String
+
+
+Resources:
+
+# -------------------------------------
+#                 S3
+# -------------------------------------
+# -------------------------------------
+#                 S3
+# -------------------------------------
+  S3:
+    Type: AWS::S3::Bucket
+    Properties:
+      # AccelerateConfiguration: 
+      #   AccelerateConfiguration
+      AccessControl: PublicRead # Private, PublicRead, PublicReadWrite, AuthenticatedRead, LogDeliveryWrite, BucketOwnerRead, BucketOwnerFullControl, or AwsExecRead.
+      # AnalyticsConfigurations: 
+      #   - AnalyticsConfiguration
+      # BucketEncryption:
+      #   ServerSideEncryptionConfiguration:
+      #     - BucketKeyEnabled: true
+      #       ServerSideEncryptionByDefault:
+      #         KMSMasterKeyID: !Ref KMS
+      #         SSEAlgorithm: aws:kms
+      BucketName: !Ref bucketName # required
+      # CorsConfiguration: 
+      #   CorsConfiguration
+      # IntelligentTieringConfigurations: 
+      #   - IntelligentTieringConfiguration
+      # InventoryConfigurations: 
+      #   - InventoryConfiguration
+      # LifecycleConfiguration: 
+      #   LifecycleConfiguration
+      # LoggingConfiguration: 
+      #   LoggingConfiguration
+      # MetricsConfigurations: 
+      #   - MetricsConfiguration
+      # NotificationConfiguration: 
+      #   NotificationConfiguration
+      # ObjectLockConfiguration: 
+      #   ObjectLockConfiguration
+      # ObjectLockEnabled: Boolean
+      # OwnershipControls: 
+      #   OwnershipControls
+      PublicAccessBlockConfiguration:
+        # BlockPublicAcls: True
+        # BlockPublicPolicy: True
+        # IgnorePublicAcls: True
+        # RestrictPublicBuckets: True
+        BlockPublicAcls: False
+        BlockPublicPolicy: False
+        IgnorePublicAcls: False
+        RestrictPublicBuckets: False
+      # ReplicationConfiguration: 
+      #   ReplicationConfiguration
+      # Tags: 
+      #   - Tag
+      # VersioningConfiguration: 
+      #   VersioningConfiguration
+      WebsiteConfiguration:
+        # ErrorDocument: String
+        IndexDocument: index.html
+        # RedirectAllRequestsTo: 
+        #   RedirectAllRequestsTo
+        # RoutingRules: 
+        #   - RoutingRule
+
+
+Outputs:
+# -------------------------------------
+#              S3
+# -------------------------------------
+  S3BucketName:
+    Value: !Ref S3
+    Export:
+      Name: !Sub ${PJName}-${Usage}-S3-BucketName
+  S3Arn:
+    Value: !GetAtt S3.Arn
+    Export:
+      Name: !Sub ${PJName}-${Usage}-S3-Arn
+  S3DomainName:
+    Value: !GetAtt S3.DomainName
+    Export:
+      Name: !Sub ${PJName}-${Usage}-S3-DomainName

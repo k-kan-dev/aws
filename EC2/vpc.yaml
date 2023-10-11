@@ -178,6 +178,7 @@ Outputs:
     Value: !GetAtt VPC.VpcId
     Export:
       Name: !Sub "${PJName}-VPCId"
+
   # ---------------------
   #     Security Group
   # ---------------------
@@ -189,6 +190,7 @@ Outputs:
   #   Value: !GetAtt SG.GroupId
   # SGVpcId:
   #   Value: !GetAtt SG.VpcId
+
   # ---------------------
   #        subnet
   # ---------------------
